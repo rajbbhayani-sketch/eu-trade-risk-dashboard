@@ -1,3 +1,7 @@
+## Live Demo
+[Open the dashboard](https://eu-trade-risk-dashboard-opdttpup9zzh7opacsqmki.streamlit.app/country_risk)
+## GitHub Repository
+[View the code](https://github.com/rajbhayani-sketch/eu-trade-risk-dashboard)
 # AI Decision Support for EU Trade & Energy Risk
 
 ## Overview
