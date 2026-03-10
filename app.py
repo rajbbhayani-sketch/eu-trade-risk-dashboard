@@ -30,8 +30,8 @@ top_country = df.sort_values("Total_Risk_Score",ascending=False).iloc[0]["Countr
 df_sorted = df.sort_values("Total_Risk_Score",ascending=False)
 
 # Title
-st.title("AI Decision Support for EU Trade & Energy Risk")
-st.markdown("### Monitoring trade disruption and energy risk across Europe")
+st.title("EU Trade & Energy Risk Business Intelligence Dashboard")
+st.markdown("### Business Intelligence platform for monitoring EU trade disruption and energy dependency risk")
 
 st.info(
 "This dashboard helps identify high-risk European countries using trade risk, energy risk and a calculated total risk score."
