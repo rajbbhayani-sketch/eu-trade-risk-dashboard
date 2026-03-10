@@ -1,6 +1,9 @@
 import streamlit as st
 import pandas as pd
 import plotly.express as px
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import accuracy_score
 
 # -------------------------------
 # Page setup
@@ -33,7 +36,6 @@ energy_weight = st.sidebar.slider(
     step=0.1
 )
 
-# Normalize weights if total is 0
 if trade_weight + energy_weight == 0:
     trade_weight = 0.4
     energy_weight = 0.6
@@ -56,10 +58,43 @@ def classify_risk(score):
 
 df["Risk_Category"] = df["Total_Risk_Score"].apply(classify_risk)
 
+# -------------------------------
+# Encode dependency level
+# -------------------------------
+dependency_map = {"Low": 0, "Medium": 1, "High": 2}
+df["Dependency_Level_Encoded"] = df["Dependency_Level"].map(dependency_map)
+
+# -------------------------------
+# Machine Learning Model
+# -------------------------------
+features = df[["Trade_Risk", "Energy_Risk", "Dependency_Level_Encoded"]]
+target = df["Risk_Category"]
+
+X_train, X_test, y_train, y_test = train_test_split(
+    features, target, test_size=0.25, random_state=42
+)
+
+model = RandomForestClassifier(random_state=42, n_estimators=50)
+model.fit(X_train, y_train)
+
+y_pred = model.predict(X_test)
+model_accuracy = accuracy_score(y_test, y_pred)
+
+df["Predicted_Risk_Category"] = model.predict(features)
+
+feature_importance = pd.DataFrame({
+    "Feature": features.columns,
+    "Importance": model.feature_importances_
+}).sort_values("Importance", ascending=False)
+
+# -------------------------------
 # Sort
+# -------------------------------
 df_sorted = df.sort_values("Total_Risk_Score", ascending=False)
 
+# -------------------------------
 # KPI values
+# -------------------------------
 average_risk = round(df["Total_Risk_Score"].mean(), 1)
 high_risk_count = (df["Risk_Category"] == "High").sum()
 total_countries = len(df)
@@ -86,7 +121,7 @@ st.markdown(
 
 st.info(
     "This dashboard helps identify high-risk European countries using trade risk, "
-    "energy risk, and a dynamic calculated total risk score."
+    "energy risk, a dynamic calculated total risk score, and AI-based risk prediction."
 )
 
 # -------------------------------
@@ -99,6 +134,40 @@ col1.metric("Average EU Risk", average_risk)
 col2.metric("High Risk Countries", high_risk_count)
 col3.metric("Total Countries", total_countries)
 col4.metric("Top Risk Country", top_country)
+
+st.divider()
+
+# -------------------------------
+# AI Risk Prediction
+# -------------------------------
+st.subheader("AI Risk Prediction")
+
+a1, a2 = st.columns(2)
+
+with a1:
+    st.metric("Model Accuracy", f"{model_accuracy:.2f}")
+
+with a2:
+    st.metric("Top Predicted Risk", df_sorted.iloc[0]["Predicted_Risk_Category"])
+
+st.warning(
+    "This prediction model is a portfolio demonstration only. The dataset is very small, "
+    "so results should be treated as illustrative rather than production-grade."
+)
+
+st.subheader("Predicted Risk Categories")
+st.dataframe(
+    df_sorted[["Country", "Risk_Category", "Predicted_Risk_Category"]]
+)
+
+st.subheader("Feature Importance")
+fig_importance = px.bar(
+    feature_importance,
+    x="Feature",
+    y="Importance",
+    title="AI Model Feature Importance"
+)
+st.plotly_chart(fig_importance, use_container_width=True)
 
 st.divider()
 
@@ -265,7 +334,17 @@ st.divider()
 # Dataset
 # -------------------------------
 st.subheader("EU Trade Risk Overview")
-st.dataframe(df_sorted.style.format({"Total_Risk_Score": "{:.1f}"}))
+st.dataframe(
+    df_sorted[[
+        "Country",
+        "Trade_Risk",
+        "Energy_Risk",
+        "Dependency_Level",
+        "Total_Risk_Score",
+        "Risk_Category",
+        "Predicted_Risk_Category"
+    ]].style.format({"Total_Risk_Score": "{:.1f}"})
+)
 
 st.divider()
 
