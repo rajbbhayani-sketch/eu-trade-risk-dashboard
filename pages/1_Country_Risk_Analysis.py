@@ -67,7 +67,6 @@ country_b = st.sidebar.selectbox(
 # -------------------------------
 filtered_df = df[df["Risk_Category"].isin(selected_categories)].copy()
 
-# If sidebar filter removes everything, fall back gracefully
 if filtered_df.empty:
     st.warning("No countries match the selected risk categories. Showing the full dataset instead.")
     filtered_df = df.copy()
@@ -173,7 +172,6 @@ else:
 
     st.plotly_chart(fig, use_container_width=True)
 
-    # Insight text
     if len(country_a_df) > 0 and len(country_b_df) > 0:
         score_a = float(country_a_df.iloc[0]["Total_Risk_Score"])
         score_b = float(country_b_df.iloc[0]["Total_Risk_Score"])
@@ -232,10 +230,27 @@ st.plotly_chart(fig_all, use_container_width=True)
 st.divider()
 
 # -------------------------------
+# Global risk map
+# -------------------------------
+st.subheader("Global Risk Map")
+
+fig_map = px.choropleth(
+    filtered_df,
+    locations="ISO3",
+    color="Total_Risk_Score",
+    hover_name="Country",
+    color_continuous_scale="Reds",
+    title="Global Trade & Energy Risk Map"
+)
+
+st.plotly_chart(fig_map, use_container_width=True)
+
+st.divider()
+
+# -------------------------------
 # Note
 # -------------------------------
 st.subheader("Analysis Note")
 st.info(
     "This page compares trade risk, energy risk, and total risk score across all countries "
     "in the live dataset, including EU members, India, and China."
-)
