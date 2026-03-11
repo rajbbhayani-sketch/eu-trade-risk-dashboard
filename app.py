@@ -44,6 +44,12 @@ forecast_growth = st.sidebar.slider(
     step=1
 )
 
+explain_country = st.sidebar.selectbox(
+    "Explain Country Risk",
+    sorted(df["Country"].tolist()),
+    index=sorted(df["Country"].tolist()).index("Germany") if "Germany" in df["Country"].tolist() else 0
+)
+
 if trade_weight + energy_weight == 0:
     trade_weight = 0.4
     energy_weight = 0.6
@@ -87,6 +93,22 @@ df["Risk_Trend"] = df.apply(
     lambda row: risk_trend(row["Total_Risk_Score"], row["Projected_Risk_Score"]),
     axis=1
 )
+
+# -------------------------------
+# Risk explanation engine
+# -------------------------------
+df["Trade_Contribution"] = (trade_weight * df["Trade_Risk"]).round(1)
+df["Energy_Contribution"] = (energy_weight * df["Energy_Risk"]).round(1)
+
+def explain_driver(row):
+    if row["Energy_Contribution"] > row["Trade_Contribution"]:
+        return "Energy Dependency"
+    elif row["Trade_Contribution"] > row["Energy_Contribution"]:
+        return "Trade Disruption"
+    else:
+        return "Balanced"
+
+df["Main_Risk_Driver"] = df.apply(explain_driver, axis=1)
 
 # -------------------------------
 # Encode dependency level
@@ -152,6 +174,12 @@ else:
 top3 = df_sorted.head(3)
 
 # -------------------------------
+# Country explanation selection
+# -------------------------------
+explain_df = df[df["Country"] == explain_country].copy()
+explain_row = explain_df.iloc[0]
+
+# -------------------------------
 # Title
 # -------------------------------
 st.title("EU Trade & Energy Risk Business Intelligence Dashboard")
@@ -161,7 +189,7 @@ st.markdown(
 
 st.info(
     "This dashboard uses live country data to identify high-risk countries using trade risk, "
-    "energy risk, dynamic risk scoring, AI-based prediction, and future risk projection."
+    "energy risk, dynamic risk scoring, AI-based prediction, future risk projection, and risk explainability."
 )
 
 # -------------------------------
@@ -243,19 +271,63 @@ st.plotly_chart(fig_forecast, use_container_width=True)
 st.divider()
 
 # -------------------------------
+# Risk explanation engine
+# -------------------------------
+st.subheader("Risk Explanation Engine")
+
+e1, e2, e3, e4 = st.columns(4)
+e1.metric("Selected Country", explain_country)
+e2.metric("Current Risk Score", f"{explain_row['Total_Risk_Score']:.1f}")
+e3.metric("Projected Risk Score", f"{explain_row['Projected_Risk_Score']:.1f}")
+e4.metric("Main Risk Driver", explain_row["Main_Risk_Driver"])
+
+st.write(
+    f"**Explanation:** {explain_country}'s current total risk score is **{explain_row['Total_Risk_Score']:.1f}**. "
+    f"The dominant driver is **{explain_row['Main_Risk_Driver']}**."
+)
+
+st.write(
+    f"- Trade contribution: **{explain_row['Trade_Contribution']:.1f}**"
+)
+st.write(
+    f"- Energy contribution: **{explain_row['Energy_Contribution']:.1f}**"
+)
+st.write(
+    f"- Current risk category: **{explain_row['Risk_Category']}**"
+)
+st.write(
+    f"- Projected trend: **{explain_row['Risk_Trend']}**"
+)
+
+explain_chart_df = pd.DataFrame({
+    "Component": ["Trade Contribution", "Energy Contribution"],
+    "Value": [explain_row["Trade_Contribution"], explain_row["Energy_Contribution"]]
+})
+
+fig_explain = px.bar(
+    explain_chart_df,
+    x="Component",
+    y="Value",
+    title=f"Risk Contribution Breakdown: {explain_country}"
+)
+st.plotly_chart(fig_explain, use_container_width=True)
+
+st.divider()
+
+# -------------------------------
 # Executive Insights
 # -------------------------------
 st.subheader("Executive Insights")
 
-e1, e2, e3 = st.columns(3)
+x1, x2, x3 = st.columns(3)
 
-with e1:
+with x1:
     st.metric("Top Risk Score", top_score)
 
-with e2:
+with x2:
     st.metric("Primary Risk Driver", main_driver)
 
-with e3:
+with x3:
     st.metric("Overall Risk Level", "Moderate" if average_risk < 70 else "High")
 
 st.write(
@@ -419,12 +491,17 @@ st.dataframe(
         "Risk_Category",
         "Predicted_Risk_Category",
         "Projected_Risk_Score",
-        "Risk_Trend"
+        "Risk_Trend",
+        "Trade_Contribution",
+        "Energy_Contribution",
+        "Main_Risk_Driver"
     ]].style.format({
         "Trade_Risk": "{:.1f}",
         "Energy_Risk": "{:.1f}",
         "Total_Risk_Score": "{:.1f}",
-        "Projected_Risk_Score": "{:.1f}"
+        "Projected_Risk_Score": "{:.1f}",
+        "Trade_Contribution": "{:.1f}",
+        "Energy_Contribution": "{:.1f}"
     })
 )
 
