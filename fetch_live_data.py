@@ -1,101 +1,100 @@
 import requests
 import pandas as pd
-from typing import Optional
+from sklearn.preprocessing import MinMaxScaler
 
-EU_PLUS = {
-    "AUT": "Austria",
-    "BEL": "Belgium",
-    "BGR": "Bulgaria",
-    "HRV": "Croatia",
-    "CYP": "Cyprus",
-    "CZE": "Czech Republic",
-    "DNK": "Denmark",
-    "EST": "Estonia",
-    "FIN": "Finland",
-    "FRA": "France",
-    "DEU": "Germany",
-    "GRC": "Greece",
-    "HUN": "Hungary",
-    "IRL": "Ireland",
-    "ITA": "Italy",
-    "LVA": "Latvia",
-    "LTU": "Lithuania",
-    "LUX": "Luxembourg",
-    "MLT": "Malta",
-    "NLD": "Netherlands",
-    "POL": "Poland",
-    "PRT": "Portugal",
-    "ROU": "Romania",
-    "SVK": "Slovakia",
-    "SVN": "Slovenia",
-    "ESP": "Spain",
-    "SWE": "Sweden",
-    "IND": "India",
-    "CHN": "China"
+# -----------------------------
+# World Bank indicators
+# -----------------------------
+INDICATORS = {
+    "trade": "NE.TRD.GNFS.ZS",     # Trade % of GDP
+    "energy": "EG.USE.PCAP.KG.OE"  # Energy use per capita
 }
 
-TRADE_INDICATOR = "NE.TRD.GNFS.ZS"
-ENERGY_INDICATOR = "EG.IMP.CONS.ZS"
+# Countries (EU + China + India)
+COUNTRIES = [
+    "DEU","FRA","ITA","ESP","NLD","BEL","POL","AUT",
+    "PRT","GRC","FIN","IRL","DNK","SWE","CZE","HUN",
+    "SVK","SVN","HRV","BGR","ROU","EST","LVA","LTU",
+    "LUX","MLT","CYP","CHN","IND"
+]
 
-def fetch_latest_value(country_code: str, indicator_code: str) -> Optional[float]:
-    url = f"https://api.worldbank.org/v2/country/{country_code}/indicator/{indicator_code}?format=json&per_page=100"
-    response = requests.get(url, timeout=30)
-    response.raise_for_status()
-    data = response.json()
+# -----------------------------
+# Fetch indicator data
+# -----------------------------
+def fetch_indicator(indicator):
 
-    if not isinstance(data, list) or len(data) < 2 or data[1] is None:
-        return None
+    url = f"https://api.worldbank.org/v2/country/{';'.join(COUNTRIES)}/indicator/{indicator}?format=json&per_page=100"
 
-    for row in data[1]:
-        if row.get("value") is not None:
-            return float(row["value"])
+    r = requests.get(url)
+    data = r.json()[1]
 
-    return None
+    records = []
 
-def dependency_level(energy_imports_pct: float) -> str:
-    if energy_imports_pct >= 70:
-        return "High"
-    elif energy_imports_pct >= 40:
-        return "Medium"
-    else:
-        return "Low"
+    for d in data:
+        if d["value"] is not None:
+            records.append({
+                "ISO3": d["country"]["id"],
+                "Country": d["country"]["value"],
+                "value": d["value"]
+            })
 
-def classify_risk(score: float) -> str:
-    if score >= 70:
-        return "High"
-    elif score >= 60:
-        return "Medium"
-    else:
-        return "Low"
+    return pd.DataFrame(records).drop_duplicates("ISO3")
 
-rows = []
 
-for iso3, country_name in EU_PLUS.items():
-    trade_value = fetch_latest_value(iso3, TRADE_INDICATOR)
-    energy_value = fetch_latest_value(iso3, ENERGY_INDICATOR)
+trade_df = fetch_indicator(INDICATORS["trade"])
+energy_df = fetch_indicator(INDICATORS["energy"])
 
-    if trade_value is None or energy_value is None:
-        print(f"Skipping {country_name} ({iso3}) due to missing data")
-        continue
+# rename columns
+trade_df = trade_df.rename(columns={"value": "Trade_Risk"})
+energy_df = energy_df.rename(columns={"value": "Energy_Risk"})
 
-    total_risk_score = round(0.4 * trade_value + 0.6 * energy_value, 1)
-    dep_level = dependency_level(energy_value)
-    risk_cat = classify_risk(total_risk_score)
+# merge datasets
+df = pd.merge(trade_df, energy_df, on=["ISO3","Country"])
 
-    rows.append({
-        "ISO3": iso3,
-        "Country": country_name,
-        "Trade_Risk": round(trade_value, 1),
-        "Energy_Risk": round(energy_value, 1),
-        "Dependency_Level": dep_level,
-        "Total_Risk_Score": total_risk_score,
-        "Risk_Category": risk_cat
-    })
+# -----------------------------
+# Normalize scores (0-100)
+# -----------------------------
+scaler = MinMaxScaler(feature_range=(0,100))
 
-df = pd.DataFrame(rows).sort_values("Total_Risk_Score", ascending=False)
+df[["Trade_Risk","Energy_Risk"]] = scaler.fit_transform(
+    df[["Trade_Risk","Energy_Risk"]]
+)
 
-output_path = "data/live_country_risk_data.csv"
-df.to_csv(output_path, index=False)
+# -----------------------------
+# Dependency level
+# -----------------------------
+df["Dependency_Level"] = pd.cut(
+    df["Energy_Risk"],
+    bins=[0,33,66,100],
+    labels=["Low","Medium","High"]
+)
 
-print(f"Saved {len(df)} rows to {output_path}")
+# -----------------------------
+# Total risk score
+# -----------------------------
+trade_weight = 0.6
+energy_weight = 0.4
+
+df["Total_Risk_Score"] = (
+    df["Trade_Risk"]*trade_weight +
+    df["Energy_Risk"]*energy_weight
+)
+
+# -----------------------------
+# Risk category
+# -----------------------------
+df["Risk_Category"] = pd.cut(
+    df["Total_Risk_Score"],
+    bins=[0,40,70,100],
+    labels=["Low","Medium","High"]
+)
+
+# -----------------------------
+# Save dataset
+# -----------------------------
+df = df.sort_values("Total_Risk_Score",ascending=False)
+
+df.to_csv("data/live_country_risk_data.csv",index=False)
+
+print("Saved dataset to data/live_country_risk_data.csv")
 print(df.head(10))
