@@ -36,6 +36,14 @@ energy_weight = st.sidebar.slider(
     step=0.1
 )
 
+forecast_growth = st.sidebar.slider(
+    "Future Risk Growth %",
+    min_value=-20,
+    max_value=20,
+    value=5,
+    step=1
+)
+
 if trade_weight + energy_weight == 0:
     trade_weight = 0.4
     energy_weight = 0.6
@@ -51,7 +59,7 @@ df["Total_Risk_Score"] = (
 def classify_risk(score):
     if score >= 70:
         return "High"
-    elif score >= 60:
+    elif score >= 40:
         return "Medium"
     else:
         return "Low"
@@ -59,10 +67,32 @@ def classify_risk(score):
 df["Risk_Category"] = df["Total_Risk_Score"].apply(classify_risk)
 
 # -------------------------------
+# Future projection
+# -------------------------------
+df["Projected_Risk_Score"] = (
+    df["Total_Risk_Score"] * (1 + forecast_growth / 100)
+).round(1)
+
+df["Projected_Risk_Score"] = df["Projected_Risk_Score"].clip(lower=0, upper=100)
+
+def risk_trend(current, projected):
+    if projected > current:
+        return "Rising"
+    elif projected < current:
+        return "Falling"
+    else:
+        return "Stable"
+
+df["Risk_Trend"] = df.apply(
+    lambda row: risk_trend(row["Total_Risk_Score"], row["Projected_Risk_Score"]),
+    axis=1
+)
+
+# -------------------------------
 # Encode dependency level
 # -------------------------------
 dependency_map = {"Low": 0, "Medium": 1, "High": 2}
-df["Dependency_Level_Encoded"] = df["Dependency_Level"].map(dependency_map)
+df["Dependency_Level_Encoded"] = df["Dependency_Level"].map(dependency_map).fillna(1)
 
 # -------------------------------
 # AI model
@@ -70,7 +100,6 @@ df["Dependency_Level_Encoded"] = df["Dependency_Level"].map(dependency_map)
 features = df[["Trade_Risk", "Energy_Risk", "Dependency_Level_Encoded"]]
 target = df["Risk_Category"]
 
-# Only train if enough class variety exists
 model_accuracy = None
 df["Predicted_Risk_Category"] = df["Risk_Category"]
 
@@ -106,6 +135,7 @@ df_sorted = df.sort_values("Total_Risk_Score", ascending=False)
 # KPI values
 # -------------------------------
 average_risk = round(df["Total_Risk_Score"].mean(), 1)
+average_projected_risk = round(df["Projected_Risk_Score"].mean(), 1)
 high_risk_count = (df["Risk_Category"] == "High").sum()
 total_countries = len(df)
 top_country = df_sorted.iloc[0]["Country"]
@@ -130,8 +160,8 @@ st.markdown(
 )
 
 st.info(
-    "This dashboard now uses live country data and helps identify high-risk countries "
-    "using trade risk, energy risk, a dynamic total risk score, and AI-based risk prediction."
+    "This dashboard uses live country data to identify high-risk countries using trade risk, "
+    "energy risk, dynamic risk scoring, AI-based prediction, and future risk projection."
 )
 
 # -------------------------------
@@ -164,8 +194,7 @@ with a2:
     st.metric("Top Predicted Risk", df_sorted.iloc[0]["Predicted_Risk_Category"])
 
 st.warning(
-    "This prediction model is for portfolio demonstration. It is more useful now than before, "
-    "but results should still be interpreted cautiously."
+    "This prediction model is for portfolio demonstration. Results should be interpreted cautiously."
 )
 
 st.subheader("Predicted Risk Categories")
@@ -181,6 +210,35 @@ fig_importance = px.bar(
     title="AI Model Feature Importance"
 )
 st.plotly_chart(fig_importance, use_container_width=True)
+
+st.divider()
+
+# -------------------------------
+# Future Risk Projection
+# -------------------------------
+st.subheader("Future Risk Projection")
+
+f1, f2, f3 = st.columns(3)
+f1.metric("Average Current Risk", average_risk)
+f2.metric("Average Projected Risk", average_projected_risk)
+f3.metric("Scenario Growth %", f"{forecast_growth}%")
+
+forecast_df = df_sorted[["Country", "Total_Risk_Score", "Projected_Risk_Score", "Risk_Trend"]].copy()
+st.dataframe(
+    forecast_df.style.format({
+        "Total_Risk_Score": "{:.1f}",
+        "Projected_Risk_Score": "{:.1f}"
+    })
+)
+
+fig_forecast = px.bar(
+    forecast_df.head(10),
+    x="Country",
+    y=["Total_Risk_Score", "Projected_Risk_Score"],
+    barmode="group",
+    title="Current vs Projected Risk Score (Top 10 Countries)"
+)
+st.plotly_chart(fig_forecast, use_container_width=True)
 
 st.divider()
 
@@ -238,8 +296,7 @@ st.write(
 )
 
 st.write(
-    "Adjusting these weights changes the total risk score and helps simulate "
-    "different policy or strategic priorities."
+    f"Future projection scenario applies **{forecast_growth}%** growth to the current total risk score."
 )
 
 st.divider()
@@ -252,7 +309,7 @@ st.subheader("Business Problem")
 st.write(
     "Countries face exposure to trade disruption and energy import dependency. "
     "Decision-makers need a simple way to identify vulnerable countries, compare risk levels, "
-    "and prioritize strategic responses using real-world data."
+    "prioritize strategic responses, and anticipate future risk developments."
 )
 
 st.divider()
@@ -303,6 +360,7 @@ st.write(f"- **{top3.iloc[0]['Country']}** has the highest combined risk exposur
 st.write(f"- The **average risk score is {average_risk}**, indicating the overall regional risk level.")
 st.write(f"- **{main_driver}** appears to be the dominant driver of total risk.")
 st.write(f"- **{high_risk_count} country/countries** are currently classified as High Risk.")
+st.write(f"- The projection scenario currently suggests an average future risk score of **{average_projected_risk}**.")
 
 st.divider()
 
@@ -311,8 +369,11 @@ st.divider()
 # -------------------------------
 st.subheader("Top 3 Risk Countries")
 
-top3_display = top3[["Country", "Total_Risk_Score", "Risk_Category"]]
-st.dataframe(top3_display.style.format({"Total_Risk_Score": "{:.1f}"}))
+top3_display = top3[["Country", "Total_Risk_Score", "Risk_Category", "Projected_Risk_Score", "Risk_Trend"]]
+st.dataframe(top3_display.style.format({
+    "Total_Risk_Score": "{:.1f}",
+    "Projected_Risk_Score": "{:.1f}"
+}))
 
 st.divider()
 
@@ -356,8 +417,15 @@ st.dataframe(
         "Dependency_Level",
         "Total_Risk_Score",
         "Risk_Category",
-        "Predicted_Risk_Category"
-    ]].style.format({"Total_Risk_Score": "{:.1f}"})
+        "Predicted_Risk_Category",
+        "Projected_Risk_Score",
+        "Risk_Trend"
+    ]].style.format({
+        "Trade_Risk": "{:.1f}",
+        "Energy_Risk": "{:.1f}",
+        "Total_Risk_Score": "{:.1f}",
+        "Projected_Risk_Score": "{:.1f}"
+    })
 )
 
 st.divider()
