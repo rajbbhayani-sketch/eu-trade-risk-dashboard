@@ -4,22 +4,17 @@ import plotly.express as px
 
 st.set_page_config(page_title="Country Risk Analysis", layout="wide")
 
-# Load dataset
 df = pd.read_csv("data/live_country_risk_data.csv")
-
-# Clean data
 df = df.dropna(subset=["Country", "Trade_Risk", "Energy_Risk", "Total_Risk_Score"])
 df["Risk_Category"] = df["Risk_Category"].fillna("Unknown")
 df["Dependency_Level"] = df["Dependency_Level"].fillna("Unknown")
 
 st.title("Country Risk Analysis")
 
-# Stop if empty
 if df.empty:
     st.error("The live dataset is empty. Please run fetch_live_data.py again.")
     st.stop()
 
-# Sidebar controls
 st.sidebar.header("Country Risk Controls")
 
 countries = sorted(df["Country"].astype(str).unique().tolist())
@@ -56,7 +51,6 @@ country_b = st.sidebar.selectbox(
     key="country_b"
 )
 
-# Filter dataset
 filtered_df = df[df["Risk_Category"].isin(selected_categories)].copy()
 
 if filtered_df.empty:
@@ -70,7 +64,6 @@ if selected_df.empty:
 country_a_df = df[df["Country"] == country_a].copy()
 country_b_df = df[df["Country"] == country_b].copy()
 
-# Summary metrics
 top_row = df.sort_values("Total_Risk_Score", ascending=False).iloc[0]
 top_country = top_row["Country"]
 highest_score = float(top_row["Total_Risk_Score"])
@@ -91,9 +84,7 @@ if high_risk_count > 0:
 
 st.divider()
 
-# Full dataset table
 st.subheader("Live Country Risk Dataset")
-
 st.dataframe(
     filtered_df.style.format({
         "Trade_Risk": "{:.1f}",
@@ -104,9 +95,7 @@ st.dataframe(
 
 st.divider()
 
-# Selected country detail
 st.subheader("Selected Country Risk")
-
 if selected_df.empty:
     st.info("No selected-country data available for the current filters.")
 else:
@@ -120,7 +109,6 @@ else:
 
 st.divider()
 
-# Compare two countries
 st.subheader("Compare Two Countries")
 st.write(f"### {country_a} vs {country_b}")
 
@@ -130,14 +118,7 @@ if compare_df.empty:
     st.info("Comparison data is not available.")
 else:
     comparison_table = compare_df[
-        [
-            "Country",
-            "Trade_Risk",
-            "Energy_Risk",
-            "Dependency_Level",
-            "Total_Risk_Score",
-            "Risk_Category",
-        ]
+        ["Country", "Trade_Risk", "Energy_Risk", "Dependency_Level", "Total_Risk_Score", "Risk_Category"]
     ]
 
     st.dataframe(
@@ -155,36 +136,26 @@ else:
         barmode="group",
         title="Risk Comparison"
     )
-
     st.plotly_chart(fig_compare, use_container_width=True)
 
     if len(country_a_df) > 0 and len(country_b_df) > 0:
         score_a = float(country_a_df.iloc[0]["Total_Risk_Score"])
         score_b = float(country_b_df.iloc[0]["Total_Risk_Score"])
-
         trade_a = float(country_a_df.iloc[0]["Trade_Risk"])
         trade_b = float(country_b_df.iloc[0]["Trade_Risk"])
-
         energy_a = float(country_a_df.iloc[0]["Energy_Risk"])
         energy_b = float(country_b_df.iloc[0]["Energy_Risk"])
-
         risk_a = str(country_a_df.iloc[0]["Risk_Category"])
         risk_b = str(country_b_df.iloc[0]["Risk_Category"])
 
         st.subheader("Comparison Insight")
 
         if score_a > score_b:
-            st.write(
-                f"**{country_a}** has a higher total risk score (**{score_a:.1f}**) than **{country_b}** (**{score_b:.1f}**)."
-            )
+            st.write(f"**{country_a}** has a higher total risk score (**{score_a:.1f}**) than **{country_b}** (**{score_b:.1f}**).")
         elif score_b > score_a:
-            st.write(
-                f"**{country_b}** has a higher total risk score (**{score_b:.1f}**) than **{country_a}** (**{score_a:.1f}**)."
-            )
+            st.write(f"**{country_b}** has a higher total risk score (**{score_b:.1f}**) than **{country_a}** (**{score_a:.1f}**).")
         else:
-            st.write(
-                f"**{country_a}** and **{country_b}** currently have the same total risk score (**{score_a:.1f}**)."
-            )
+            st.write(f"**{country_a}** and **{country_b}** currently have the same total risk score (**{score_a:.1f}**).")
 
         if energy_a > energy_b:
             st.write(f"- {country_a} has higher energy-related risk than {country_b}.")
@@ -204,9 +175,7 @@ else:
 
 st.divider()
 
-# All-country chart
 st.subheader("All-Country Risk Comparison")
-
 fig_all = px.bar(
     filtered_df.sort_values("Total_Risk_Score", ascending=False),
     x="Country",
@@ -214,14 +183,11 @@ fig_all = px.bar(
     barmode="group",
     title="Trade Risk vs Energy Risk by Country"
 )
-
 st.plotly_chart(fig_all, use_container_width=True)
 
 st.divider()
 
-# Global risk map
 st.subheader("Global Risk Map")
-
 fig_map = px.choropleth(
     filtered_df,
     locations="ISO3",
@@ -230,13 +196,9 @@ fig_map = px.choropleth(
     color_continuous_scale="Reds",
     title="Global Trade & Energy Risk Map"
 )
-
 st.plotly_chart(fig_map, use_container_width=True)
 
 st.divider()
 
-# Note
 st.subheader("Analysis Note")
-st.info(
-    "This page compares trade risk, energy risk, and total risk score across all countries "
-    "in the live dataset, including EU members, India, and China."
+st.info("This page compares trade risk, energy risk, and total risk score across all countries in the live dataset, including EU members, India, and China.")
