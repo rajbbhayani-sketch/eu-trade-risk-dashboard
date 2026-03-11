@@ -11,9 +11,9 @@ from sklearn.metrics import accuracy_score
 st.set_page_config(page_title="EU Trade Risk AI", layout="wide")
 
 # -------------------------------
-# Load data
+# Load LIVE data
 # -------------------------------
-df = pd.read_csv("data/eu_trade_energy_risk.csv")
+df = pd.read_csv("data/live_country_risk_data.csv")
 
 # -------------------------------
 # Sidebar scenario analysis
@@ -65,27 +65,37 @@ dependency_map = {"Low": 0, "Medium": 1, "High": 2}
 df["Dependency_Level_Encoded"] = df["Dependency_Level"].map(dependency_map)
 
 # -------------------------------
-# Machine Learning Model
+# AI model
 # -------------------------------
 features = df[["Trade_Risk", "Energy_Risk", "Dependency_Level_Encoded"]]
 target = df["Risk_Category"]
 
-X_train, X_test, y_train, y_test = train_test_split(
-    features, target, test_size=0.25, random_state=42
-)
+# Only train if enough class variety exists
+model_accuracy = None
+df["Predicted_Risk_Category"] = df["Risk_Category"]
 
-model = RandomForestClassifier(random_state=42, n_estimators=50)
-model.fit(X_train, y_train)
+if target.nunique() > 1 and len(df) >= 10:
+    X_train, X_test, y_train, y_test = train_test_split(
+        features, target, test_size=0.25, random_state=42
+    )
 
-y_pred = model.predict(X_test)
-model_accuracy = accuracy_score(y_test, y_pred)
+    model = RandomForestClassifier(random_state=42, n_estimators=100)
+    model.fit(X_train, y_train)
 
-df["Predicted_Risk_Category"] = model.predict(features)
+    y_pred = model.predict(X_test)
+    model_accuracy = accuracy_score(y_test, y_pred)
 
-feature_importance = pd.DataFrame({
-    "Feature": features.columns,
-    "Importance": model.feature_importances_
-}).sort_values("Importance", ascending=False)
+    df["Predicted_Risk_Category"] = model.predict(features)
+
+    feature_importance = pd.DataFrame({
+        "Feature": features.columns,
+        "Importance": model.feature_importances_
+    }).sort_values("Importance", ascending=False)
+else:
+    feature_importance = pd.DataFrame({
+        "Feature": ["Trade_Risk", "Energy_Risk", "Dependency_Level_Encoded"],
+        "Importance": [0.0, 0.0, 0.0]
+    })
 
 # -------------------------------
 # Sort
@@ -120,8 +130,8 @@ st.markdown(
 )
 
 st.info(
-    "This dashboard helps identify high-risk European countries using trade risk, "
-    "energy risk, a dynamic calculated total risk score, and AI-based risk prediction."
+    "This dashboard now uses live country data and helps identify high-risk countries "
+    "using trade risk, energy risk, a dynamic total risk score, and AI-based risk prediction."
 )
 
 # -------------------------------
@@ -130,7 +140,7 @@ st.info(
 st.subheader("Executive Summary")
 
 col1, col2, col3, col4 = st.columns(4)
-col1.metric("Average EU Risk", average_risk)
+col1.metric("Average Risk Score", average_risk)
 col2.metric("High Risk Countries", high_risk_count)
 col3.metric("Total Countries", total_countries)
 col4.metric("Top Risk Country", top_country)
@@ -145,14 +155,17 @@ st.subheader("AI Risk Prediction")
 a1, a2 = st.columns(2)
 
 with a1:
-    st.metric("Model Accuracy", f"{model_accuracy:.2f}")
+    if model_accuracy is not None:
+        st.metric("Model Accuracy", f"{model_accuracy:.2f}")
+    else:
+        st.metric("Model Accuracy", "N/A")
 
 with a2:
     st.metric("Top Predicted Risk", df_sorted.iloc[0]["Predicted_Risk_Category"])
 
 st.warning(
-    "This prediction model is a portfolio demonstration only. The dataset is very small, "
-    "so results should be treated as illustrative rather than production-grade."
+    "This prediction model is for portfolio demonstration. It is more useful now than before, "
+    "but results should still be interpreted cautiously."
 )
 
 st.subheader("Predicted Risk Categories")
@@ -185,11 +198,11 @@ with e2:
     st.metric("Primary Risk Driver", main_driver)
 
 with e3:
-    st.metric("EU Risk Level", "Moderate" if average_risk < 70 else "High")
+    st.metric("Overall Risk Level", "Moderate" if average_risk < 70 else "High")
 
 st.write(
-    f"**Key Finding:** {top_country} currently represents the highest combined trade "
-    f"and energy risk in the dataset, with a total risk score of **{top_score}**."
+    f"**Key Finding:** {top_country} currently has the highest combined trade and energy risk "
+    f"in the live dataset, with a total risk score of **{top_score}**."
 )
 
 st.divider()
@@ -208,9 +221,9 @@ else:
     st.success("No countries are currently classified as High Risk.")
 
 if avg_energy > avg_trade:
-    st.error("Energy dependency is currently the dominant structural risk across the EU dataset.")
+    st.error("Energy dependency is currently the dominant structural risk across the dataset.")
 else:
-    st.error("Trade disruption is currently the dominant structural risk across the EU dataset.")
+    st.error("Trade disruption is currently the dominant structural risk across the dataset.")
 
 st.divider()
 
@@ -237,9 +250,9 @@ st.divider()
 st.subheader("Business Problem")
 
 st.write(
-    "European economies face rising exposure to trade disruption and energy dependency. "
+    "Countries face exposure to trade disruption and energy import dependency. "
     "Decision-makers need a simple way to identify vulnerable countries, compare risk levels, "
-    "and prioritize strategic responses."
+    "and prioritize strategic responses using real-world data."
 )
 
 st.divider()
@@ -258,9 +271,9 @@ with d2:
     st.metric("Average Energy Risk", avg_energy)
 
 if avg_energy > avg_trade:
-    st.write("**Insight:** Energy dependency is currently the main risk driver across EU countries.")
+    st.write("**Insight:** Energy dependency is currently the main risk driver across countries.")
 else:
-    st.write("**Insight:** Trade disruption is currently the main risk driver across EU countries.")
+    st.write("**Insight:** Trade disruption is currently the main risk driver across countries.")
 
 st.divider()
 
@@ -270,7 +283,7 @@ st.divider()
 st.subheader("Country Risk Comparison")
 
 fig_compare = px.bar(
-    df,
+    df_sorted,
     x="Country",
     y=["Trade_Risk", "Energy_Risk"],
     barmode="group",
@@ -286,8 +299,8 @@ st.divider()
 # -------------------------------
 st.subheader("Key Insights")
 
-st.write(f"- **{top3.iloc[0]['Country']}** has the highest combined risk exposure in the dataset.")
-st.write(f"- The **average EU risk score is {average_risk}**, indicating a moderate overall risk environment.")
+st.write(f"- **{top3.iloc[0]['Country']}** has the highest combined risk exposure in the live dataset.")
+st.write(f"- The **average risk score is {average_risk}**, indicating the overall regional risk level.")
 st.write(f"- **{main_driver}** appears to be the dominant driver of total risk.")
 st.write(f"- **{high_risk_count} country/countries** are currently classified as High Risk.")
 
@@ -333,9 +346,10 @@ st.divider()
 # -------------------------------
 # Dataset
 # -------------------------------
-st.subheader("EU Trade Risk Overview")
+st.subheader("Live Country Risk Overview")
 st.dataframe(
     df_sorted[[
+        "ISO3",
         "Country",
         "Trade_Risk",
         "Energy_Risk",
