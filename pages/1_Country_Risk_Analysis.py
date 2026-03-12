@@ -162,10 +162,11 @@ st.markdown(
 st.subheader("Country Overview")
 
 s1, s2, s3, s4 = st.columns(4)
+
 s1.metric("Top Risk Country", top_country)
 s2.metric("Highest Risk Score", f"{top_score:.1f}")
-s3.metric("Average Portfolio Risk", avg_score)
-s4.metric("High Risk Countries", high_risk_count)
+s3.metric("Average Portfolio Risk", f"{avg_score:.1f}")
+s4.metric("High Risk Countries", f"{high_risk_count}")
 
 if high_risk_count > 0:
     st.markdown(
