@@ -1,6 +1,7 @@
 import streamlit as st
 import pandas as pd
 import plotly.express as px
+from pathlib import Path
 
 # -------------------------------------------------
 # PAGE CONFIG
@@ -15,28 +16,19 @@ st.set_page_config(
 # -------------------------------------------------
 st.markdown("""
 <style>
-    .main {
-        padding-top: 1.2rem;
-    }
-
+    .main { padding-top: 1.2rem; }
     .block-container {
         padding-top: 1.5rem;
         padding-bottom: 2rem;
         max-width: 1200px;
     }
-
-    h1, h2, h3 {
-        color: #1f2a44;
-        font-weight: 700;
-    }
-
+    h1, h2, h3 { color: #1f2a44; font-weight: 700; }
     .subtitle {
         font-size: 1.1rem;
         color: #4b5563;
         margin-top: -8px;
         margin-bottom: 18px;
     }
-
     .info-banner {
         background-color: #eef4ff;
         border-left: 6px solid #4f46e5;
@@ -45,7 +37,6 @@ st.markdown("""
         color: #1f2937;
         margin-bottom: 18px;
     }
-
     .alert-banner {
         background-color: #fff7e6;
         border-left: 6px solid #d97706;
@@ -54,7 +45,6 @@ st.markdown("""
         color: #3f3f46;
         margin-bottom: 18px;
     }
-
     .section-card {
         background-color: #ffffff;
         border: 1px solid #e5e7eb;
@@ -70,10 +60,16 @@ st.markdown("""
 # LOAD DATA
 # -------------------------------------------------
 df = pd.read_csv("data/live_country_risk_data.csv")
+history_path = Path("data/risk_history.csv")
 
 df = df.dropna(subset=["Country", "Trade_Risk", "Energy_Risk", "Total_Risk_Score"])
 df["Risk_Category"] = df["Risk_Category"].fillna("Unknown")
 df["Dependency_Level"] = df["Dependency_Level"].fillna("Unknown")
+
+if history_path.exists():
+    history_df = pd.read_csv(history_path)
+else:
+    history_df = pd.DataFrame(columns=["Date", "ISO3", "Country", "Risk_Score"])
 
 if df.empty:
     st.error("The live dataset is empty. Please run fetch_live_data.py again.")
@@ -151,7 +147,7 @@ st.markdown(
 
 st.markdown(
     "<div class='info-banner'>"
-    "This page supports country-level analysis, peer comparison, and risk benchmarking using the live dataset."
+    "This page supports country-level analysis, peer comparison, trend review, and risk benchmarking using the live dataset."
     "</div>",
     unsafe_allow_html=True
 )
@@ -162,11 +158,10 @@ st.markdown(
 st.subheader("Country Overview")
 
 s1, s2, s3, s4 = st.columns(4)
-
 s1.metric("Top Risk Country", top_country)
 s2.metric("Highest Risk Score", f"{top_score:.1f}")
-s3.metric("Average Portfolio Risk", f"{avg_score:.1f}")
-s4.metric("High Risk Countries", f"{high_risk_count}")
+s3.metric("Average Portfolio Risk", avg_score)
+s4.metric("High Risk Countries", high_risk_count)
 
 if high_risk_count > 0:
     st.markdown(
@@ -174,6 +169,37 @@ if high_risk_count > 0:
         f"with a score of <b>{top_score:.1f}</b>.</div>",
         unsafe_allow_html=True
     )
+
+# -------------------------------------------------
+# TOP RISK CHART
+# -------------------------------------------------
+fig_top = px.bar(
+    df.sort_values("Total_Risk_Score", ascending=False).head(10),
+    x="Country",
+    y="Total_Risk_Score",
+    color="Risk_Category",
+    title="Top 10 Countries by Risk Score"
+)
+fig_top.update_layout(
+    plot_bgcolor="white",
+    paper_bgcolor="white",
+    margin=dict(l=20, r=20, t=50, b=20),
+    legend_title_text=""
+)
+st.plotly_chart(fig_top, width="stretch")
+
+st.markdown(
+    f"""
+**Executive Insight**
+
+Current portfolio analysis indicates **{top_country}** represents the highest exposure risk 
+with a score of **{top_score:.1f}**. The average risk level across monitored countries is 
+**{avg_score:.1f}**, with **{high_risk_count} high-risk markets** currently identified.
+
+Decision makers should prioritise monitoring of high-exposure countries and evaluate 
+energy dependency and trade exposure as key structural risk drivers.
+"""
+)
 
 st.divider()
 
@@ -213,6 +239,31 @@ st.dataframe(
     }),
     width="stretch"
 )
+
+# -------------------------------------------------
+# FOCUS COUNTRY TREND
+# -------------------------------------------------
+st.subheader("Focus Country Trend")
+
+if not history_df.empty:
+    country_history = history_df[history_df["Country"] == selected_country].copy()
+    country_history["Date"] = pd.to_datetime(country_history["Date"])
+
+    fig_trend = px.line(
+        country_history,
+        x="Date",
+        y="Risk_Score",
+        markers=True,
+        title=f"12-Month Risk Trend – {selected_country}"
+    )
+    fig_trend.update_layout(
+        plot_bgcolor="white",
+        paper_bgcolor="white",
+        margin=dict(l=20, r=20, t=50, b=20)
+    )
+    st.plotly_chart(fig_trend, width="stretch")
+else:
+    st.info("Risk history file not found. Run fetch_live_data.py to generate trend data.")
 
 st.divider()
 
@@ -279,6 +330,26 @@ st.markdown(
 st.divider()
 
 # -------------------------------------------------
+# HEATMAP
+# -------------------------------------------------
+st.subheader("Country Risk Heatmap")
+
+heatmap_df = filtered_df[["Country", "Trade_Risk", "Energy_Risk", "Total_Risk_Score"]].set_index("Country")
+fig_heatmap = px.imshow(
+    heatmap_df,
+    text_auto=".1f",
+    aspect="auto",
+    color_continuous_scale="Reds",
+    title="Country vs Risk Factors Heatmap"
+)
+fig_heatmap.update_layout(
+    margin=dict(l=20, r=20, t=50, b=20)
+)
+st.plotly_chart(fig_heatmap, width="stretch")
+
+st.divider()
+
+# -------------------------------------------------
 # PORTFOLIO COMPARISON
 # -------------------------------------------------
 st.subheader("Portfolio Benchmarking")
@@ -317,6 +388,34 @@ fig_map.update_layout(
     margin=dict(l=20, r=20, t=50, b=20)
 )
 st.plotly_chart(fig_map, width="stretch")
+
+st.divider()
+
+# -------------------------------------------------
+# DOWNLOAD
+# -------------------------------------------------
+st.subheader("Download Country Reports")
+
+full_csv = filtered_df.to_csv(index=False).encode("utf-8")
+benchmark_csv = benchmark_table.to_csv(index=False).encode("utf-8")
+
+c1, c2 = st.columns(2)
+
+with c1:
+    st.download_button(
+        label="Download Filtered Country Dataset (CSV)",
+        data=full_csv,
+        file_name="filtered_country_risk_dataset.csv",
+        mime="text/csv"
+    )
+
+with c2:
+    st.download_button(
+        label="Download Benchmark Comparison (CSV)",
+        data=benchmark_csv,
+        file_name="country_benchmark_comparison.csv",
+        mime="text/csv"
+    )
 
 st.divider()
 

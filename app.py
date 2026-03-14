@@ -4,6 +4,7 @@ import plotly.express as px
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import accuracy_score
+from pathlib import Path
 
 # -------------------------------------------------
 # PAGE CONFIG
@@ -18,28 +19,19 @@ st.set_page_config(
 # -------------------------------------------------
 st.markdown("""
 <style>
-    .main {
-        padding-top: 1.2rem;
-    }
-
+    .main { padding-top: 1.2rem; }
     .block-container {
         padding-top: 1.5rem;
         padding-bottom: 2rem;
         max-width: 1200px;
     }
-
-    h1, h2, h3 {
-        color: #1f2a44;
-        font-weight: 700;
-    }
-
+    h1, h2, h3 { color: #1f2a44; font-weight: 700; }
     .subtitle {
-        font-size: 1.2rem;
+        font-size: 1.15rem;
         color: #4b5563;
         margin-top: -8px;
         margin-bottom: 18px;
     }
-
     .info-banner {
         background-color: #eef4ff;
         border-left: 6px solid #4f46e5;
@@ -48,7 +40,6 @@ st.markdown("""
         color: #1f2937;
         margin-bottom: 18px;
     }
-
     .alert-banner {
         background-color: #fff7e6;
         border-left: 6px solid #d97706;
@@ -57,7 +48,6 @@ st.markdown("""
         color: #3f3f46;
         margin-bottom: 18px;
     }
-
     .section-card {
         background-color: #ffffff;
         border: 1px solid #e5e7eb;
@@ -66,7 +56,6 @@ st.markdown("""
         margin-bottom: 16px;
         box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04);
     }
-
     .small-note {
         color: #6b7280;
         font-size: 0.92rem;
@@ -77,11 +66,19 @@ st.markdown("""
 # -------------------------------------------------
 # LOAD DATA
 # -------------------------------------------------
-df = pd.read_csv("data/live_country_risk_data.csv")
+live_path = Path("data/live_country_risk_data.csv")
+history_path = Path("data/risk_history.csv")
+
+df = pd.read_csv(live_path)
 
 if df.empty:
     st.error("Dataset empty. Run fetch_live_data.py first.")
     st.stop()
+
+if history_path.exists():
+    history_df = pd.read_csv(history_path)
+else:
+    history_df = pd.DataFrame(columns=["Date", "ISO3", "Country", "Risk_Score"])
 
 # -------------------------------------------------
 # SIDEBAR
@@ -122,7 +119,6 @@ df["Risk_Category"] = df["Total_Risk_Score"].apply(classify)
 df["Projected_Risk_Score"] = (
     df["Total_Risk_Score"] * (1 + growth / 100)
 ).round(1)
-
 df["Projected_Risk_Score"] = df["Projected_Risk_Score"].clip(0, 100)
 
 def trend(row):
@@ -148,6 +144,15 @@ def driver(row):
     return "Balanced"
 
 df["Main_Risk_Driver"] = df.apply(driver, axis=1)
+
+def top_3_drivers(row):
+    items = [
+        ("Energy Dependency", row["Energy_Contribution"]),
+        ("Trade Exposure", row["Trade_Contribution"]),
+        ("Baseline Structural Risk", max(0.0, 100 - row["Total_Risk_Score"]) / 10)
+    ]
+    items = sorted(items, key=lambda x: x[1], reverse=True)
+    return [items[0][0], items[1][0], items[2][0]]
 
 # -------------------------------------------------
 # AI MODEL
@@ -203,6 +208,10 @@ avg_energy = round(df["Energy_Risk"].mean(), 1)
 portfolio_driver = "Energy Dependency" if avg_energy > avg_trade else "Trade Exposure"
 
 focus_row = df[df["Country"] == focus_country].iloc[0]
+focus_drivers = top_3_drivers(focus_row)
+
+last_updated = df["Last_Updated"].iloc[0] if "Last_Updated" in df.columns else "N/A"
+data_source = df["Data_Source"].iloc[0] if "Data_Source" in df.columns else "N/A"
 
 # -------------------------------------------------
 # HEADER
@@ -215,11 +224,23 @@ st.markdown(
 
 st.markdown(
     "<div class='info-banner'>"
-    "This platform combines live macro-risk data, AI classification, scenario simulation, and forward-looking projection "
-    "to support executive monitoring and strategic response planning."
+    "This platform combines live macro-risk data, AI classification, scenario simulation, forward-looking projection, "
+    "and explainability to support executive monitoring and strategic response planning."
     "</div>",
     unsafe_allow_html=True
 )
+
+# -------------------------------------------------
+# REAL-TIME SOURCE INFO
+# -------------------------------------------------
+st.subheader("Data Status")
+
+d1, d2, d3 = st.columns(3)
+d1.metric("Data Source", data_source)
+d2.metric("Last Update", last_updated[:16] if isinstance(last_updated, str) else "N/A")
+d3.metric("Countries Monitored", total_countries)
+
+st.divider()
 
 # -------------------------------------------------
 # EXECUTIVE SUMMARY
@@ -260,10 +281,37 @@ fig_forecast = px.bar(
 fig_forecast.update_layout(
     plot_bgcolor="white",
     paper_bgcolor="white",
-    legend_title_text="",
-    margin=dict(l=20, r=20, t=50, b=20)
+    margin=dict(l=20, r=20, t=50, b=20),
+    legend_title_text=""
 )
 st.plotly_chart(fig_forecast, width="stretch")
+
+st.divider()
+
+# -------------------------------------------------
+# RISK TREND VISUALIZATION
+# -------------------------------------------------
+st.subheader("Risk Trend Over Time")
+
+if not history_df.empty:
+    country_history = history_df[history_df["Country"] == focus_country].copy()
+    country_history["Date"] = pd.to_datetime(country_history["Date"])
+
+    fig_trend = px.line(
+        country_history,
+        x="Date",
+        y="Risk_Score",
+        markers=True,
+        title=f"12-Month Risk Trend – {focus_country}"
+    )
+    fig_trend.update_layout(
+        plot_bgcolor="white",
+        paper_bgcolor="white",
+        margin=dict(l=20, r=20, t=50, b=20)
+    )
+    st.plotly_chart(fig_trend, width="stretch")
+else:
+    st.info("Risk history file not found. Run fetch_live_data.py to generate trend data.")
 
 st.divider()
 
@@ -281,7 +329,11 @@ r4.metric("Primary Driver", focus_row["Main_Risk_Driver"])
 st.markdown(
     f"<div class='section-card'>"
     f"<b>{focus_country}</b> is currently classified as <b>{focus_row['Risk_Category']}</b> risk. "
-    f"The country’s risk profile is primarily driven by <b>{focus_row['Main_Risk_Driver']}</b>. "
+    f"The country’s risk profile is primarily driven by <b>{focus_row['Main_Risk_Driver']}</b>.<br><br>"
+    f"<b>Top 3 Drivers:</b><br>"
+    f"1. {focus_drivers[0]}<br>"
+    f"2. {focus_drivers[1]}<br>"
+    f"3. {focus_drivers[2]}<br><br>"
     f"Trade contribution: <b>{focus_row['Trade_Contribution']:.1f}</b> | "
     f"Energy contribution: <b>{focus_row['Energy_Contribution']:.1f}</b> | "
     f"Trend: <b>{focus_row['Risk_Trend']}</b>."
@@ -364,6 +416,26 @@ with a2:
 st.divider()
 
 # -------------------------------------------------
+# HEATMAP
+# -------------------------------------------------
+st.subheader("Risk Heatmap")
+
+heatmap_df = df[["Country", "Trade_Risk", "Energy_Risk", "Total_Risk_Score"]].set_index("Country")
+fig_heatmap = px.imshow(
+    heatmap_df,
+    text_auto=".1f",
+    aspect="auto",
+    color_continuous_scale="Reds",
+    title="Country vs Risk Factors Heatmap"
+)
+fig_heatmap.update_layout(
+    margin=dict(l=20, r=20, t=50, b=20)
+)
+st.plotly_chart(fig_heatmap, width="stretch")
+
+st.divider()
+
+# -------------------------------------------------
 # PORTFOLIO COMPARISON
 # -------------------------------------------------
 st.subheader("Portfolio Risk Comparison")
@@ -433,6 +505,33 @@ st.plotly_chart(fig_map, width="stretch")
 st.divider()
 
 # -------------------------------------------------
+# DOWNLOADABLE REPORTS
+# -------------------------------------------------
+st.subheader("Download Reports")
+
+csv_data = df.to_csv(index=False).encode("utf-8")
+top10_csv = top_table.to_csv(index=False).encode("utf-8")
+
+b1, b2 = st.columns(2)
+with b1:
+    st.download_button(
+        label="Download Full Risk Dataset (CSV)",
+        data=csv_data,
+        file_name="eu_trade_energy_risk_report.csv",
+        mime="text/csv"
+    )
+
+with b2:
+    st.download_button(
+        label="Download Top Risk Countries Report (CSV)",
+        data=top10_csv,
+        file_name="top_risk_countries_report.csv",
+        mime="text/csv"
+    )
+
+st.divider()
+
+# -------------------------------------------------
 # DETAILED DATA
 # -------------------------------------------------
 st.subheader("Detailed Dataset")
@@ -450,7 +549,9 @@ detail_cols = [
     "Risk_Trend",
     "Trade_Contribution",
     "Energy_Contribution",
-    "Main_Risk_Driver"
+    "Main_Risk_Driver",
+    "Last_Updated",
+    "Data_Source"
 ]
 
 st.dataframe(
