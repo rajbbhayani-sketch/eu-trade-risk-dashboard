@@ -1,30 +1,30 @@
-ISO3,Country,Trade_Risk,Energy_Risk,Dependency_Level,Total_Risk_Score,Risk_Category
-MLT,Malta,57.6,100.0,High,83.0,High
-LUX,Luxembourg,100.0,26.5,Low,55.9,Medium
-IRL,Ireland,66.5,20.5,Low,38.9,Low
-CYP,Cyprus,48.8,28.3,Low,36.5,Low
-BEL,Belgium,38.8,21.4,Low,28.4,Low
-NLD,Netherlands,37.1,20.8,Low,27.3,Low
-SVK,Slovakia,42.7,13.5,Low,25.2,Low
-LTU,Lithuania,33.7,16.9,Low,23.6,Low
-HUN,Hungary,34.8,14.7,Low,22.7,Low
-SVN,Slovenia,37.7,11.3,Low,21.9,Low
-GRC,Greece,16.7,21.4,Low,19.5,Low
-AUT,Austria,22.8,15.1,Low,18.2,Low
-DNK,Denmark,30.1,10.0,Low,18.0,Low
-CZE,Czech Republic,30.0,9.6,Low,17.8,Low
-PRT,Portugal,16.7,18.4,Low,17.7,Low
-LVA,Latvia,30.3,7.6,Low,16.7,Low
-HRV,Croatia,21.6,13.4,Low,16.7,Low
-DEU,Germany,13.3,16.7,Low,15.3,Low
-ESP,Spain,10.4,18.3,Low,15.1,Low
-BGR,Bulgaria,23.3,9.3,Low,14.9,Low
-POL,Poland,20.1,11.3,Low,14.8,Low
-ITA,Italy,8.2,19.0,Low,14.7,Low
-EST,Estonia,36.2,0.0,Low,14.5,Low
-SWE,Sweden,21.9,6.0,Low,12.4,Low
-FRA,France,9.8,10.8,Low,10.4,Low
-FIN,Finland,14.7,6.6,Low,9.8,Low
-ROU,Romania,12.7,6.1,Low,8.7,Low
-IND,India,2.4,8.1,Low,5.8,Low
-CHN,China,0.0,5.0,Low,3.0,Low
+ISO3,Country,Trade_Risk,Energy_Risk,Dependency_Level,Total_Risk_Score,Risk_Category,Last_Updated,Data_Source
+MLT,Malta,57.6,100.0,High,83.0,High,2026-03-14 12:09:09,World Bank API
+LUX,Luxembourg,100.0,26.5,Low,55.9,Medium,2026-03-14 12:09:09,World Bank API
+IRL,Ireland,66.5,20.5,Low,38.9,Low,2026-03-14 12:09:09,World Bank API
+CYP,Cyprus,48.8,28.3,Low,36.5,Low,2026-03-14 12:09:09,World Bank API
+BEL,Belgium,38.8,21.4,Low,28.4,Low,2026-03-14 12:09:09,World Bank API
+NLD,Netherlands,37.1,20.8,Low,27.3,Low,2026-03-14 12:09:09,World Bank API
+SVK,Slovakia,42.7,13.5,Low,25.2,Low,2026-03-14 12:09:09,World Bank API
+LTU,Lithuania,33.7,16.9,Low,23.6,Low,2026-03-14 12:09:09,World Bank API
+HUN,Hungary,34.8,14.7,Low,22.7,Low,2026-03-14 12:09:09,World Bank API
+SVN,Slovenia,37.7,11.3,Low,21.9,Low,2026-03-14 12:09:09,World Bank API
+GRC,Greece,16.7,21.4,Low,19.5,Low,2026-03-14 12:09:09,World Bank API
+AUT,Austria,22.8,15.1,Low,18.2,Low,2026-03-14 12:09:09,World Bank API
+DNK,Denmark,30.1,10.0,Low,18.0,Low,2026-03-14 12:09:09,World Bank API
+CZE,Czech Republic,30.0,9.6,Low,17.8,Low,2026-03-14 12:09:09,World Bank API
+PRT,Portugal,16.7,18.4,Low,17.7,Low,2026-03-14 12:09:09,World Bank API
+LVA,Latvia,30.3,7.6,Low,16.7,Low,2026-03-14 12:09:09,World Bank API
+HRV,Croatia,21.6,13.4,Low,16.7,Low,2026-03-14 12:09:09,World Bank API
+DEU,Germany,13.3,16.7,Low,15.3,Low,2026-03-14 12:09:09,World Bank API
+ESP,Spain,10.4,18.3,Low,15.1,Low,2026-03-14 12:09:09,World Bank API
+BGR,Bulgaria,23.3,9.3,Low,14.9,Low,2026-03-14 12:09:09,World Bank API
+POL,Poland,20.1,11.3,Low,14.8,Low,2026-03-14 12:09:09,World Bank API
+ITA,Italy,8.2,19.0,Low,14.7,Low,2026-03-14 12:09:09,World Bank API
+EST,Estonia,36.2,0.0,Low,14.5,Low,2026-03-14 12:09:09,World Bank API
+SWE,Sweden,21.9,6.0,Low,12.4,Low,2026-03-14 12:09:09,World Bank API
+FRA,France,9.8,10.8,Low,10.4,Low,2026-03-14 12:09:09,World Bank API
+FIN,Finland,14.7,6.6,Low,9.8,Low,2026-03-14 12:09:09,World Bank API
+ROU,Romania,12.7,6.1,Low,8.7,Low,2026-03-14 12:09:09,World Bank API
+IND,India,2.4,8.1,Low,5.8,Low,2026-03-14 12:09:09,World Bank API
+CHN,China,0.0,5.0,Low,3.0,Low,2026-03-14 12:09:09,World Bank API
