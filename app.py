@@ -1,64 +1,133 @@
 import streamlit as st
 import pandas as pd
 import plotly.express as px
+from pathlib import Path
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import accuracy_score
-from pathlib import Path
 
 # -------------------------------------------------
 # PAGE CONFIG
 # -------------------------------------------------
 st.set_page_config(
-    page_title="EU Trade & Energy Risk Dashboard",
+    page_title="EU Risk Intelligence Platform",
     layout="wide"
 )
 
 # -------------------------------------------------
-# CUSTOM STYLE
+# STYLE
 # -------------------------------------------------
 st.markdown("""
 <style>
-    .main { padding-top: 1.2rem; }
+    .main {
+        background-color: #f7f9fc;
+    }
+
     .block-container {
-        padding-top: 1.5rem;
+        max-width: 1280px;
+        padding-top: 1.3rem;
         padding-bottom: 2rem;
-        max-width: 1200px;
     }
-    h1, h2, h3 { color: #1f2a44; font-weight: 700; }
-    .subtitle {
-        font-size: 1.15rem;
-        color: #4b5563;
-        margin-top: -8px;
-        margin-bottom: 18px;
+
+    h1, h2, h3 {
+        color: #132238;
+        font-weight: 700;
     }
-    .info-banner {
-        background-color: #eef4ff;
-        border-left: 6px solid #4f46e5;
-        padding: 16px 18px;
-        border-radius: 10px;
-        color: #1f2937;
-        margin-bottom: 18px;
+
+    .hero-title {
+        font-size: 2.4rem;
+        font-weight: 800;
+        color: #132238;
+        margin-bottom: 0.25rem;
     }
-    .alert-banner {
-        background-color: #fff7e6;
-        border-left: 6px solid #d97706;
-        padding: 16px 18px;
-        border-radius: 10px;
-        color: #3f3f46;
-        margin-bottom: 18px;
+
+    .hero-subtitle {
+        font-size: 1.05rem;
+        color: #5b6472;
+        margin-bottom: 1rem;
     }
+
+    .company-banner {
+        background: linear-gradient(90deg, #132238 0%, #1f3b63 100%);
+        color: white;
+        padding: 22px 24px;
+        border-radius: 18px;
+        margin-bottom: 20px;
+    }
+
     .section-card {
-        background-color: #ffffff;
-        border: 1px solid #e5e7eb;
-        border-radius: 14px;
+        background: white;
+        border: 1px solid #e8edf3;
+        border-radius: 18px;
         padding: 18px 20px;
         margin-bottom: 16px;
-        box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04);
+        box-shadow: 0 4px 14px rgba(15, 23, 42, 0.05);
     }
-    .small-note {
-        color: #6b7280;
+
+    .metric-card {
+        background: white;
+        border: 1px solid #e8edf3;
+        border-radius: 18px;
+        padding: 16px 18px;
+        box-shadow: 0 4px 14px rgba(15, 23, 42, 0.05);
+        min-height: 120px;
+    }
+
+    .metric-label {
+        color: #667085;
         font-size: 0.92rem;
+        margin-bottom: 8px;
+    }
+
+    .metric-value {
+        color: #132238;
+        font-size: 2.1rem;
+        font-weight: 800;
+        line-height: 1.1;
+    }
+
+    .metric-note {
+        color: #667085;
+        font-size: 0.85rem;
+        margin-top: 8px;
+    }
+
+    .alert-box {
+        background: #fff4e8;
+        border-left: 6px solid #d97706;
+        padding: 16px 18px;
+        border-radius: 12px;
+        color: #5b3b00;
+        margin-top: 8px;
+    }
+
+    .insight-box {
+        background: #eff6ff;
+        border-left: 6px solid #2563eb;
+        padding: 16px 18px;
+        border-radius: 12px;
+        color: #1e3a5f;
+    }
+
+    .action-box {
+        background: #f0fdf4;
+        border-left: 6px solid #16a34a;
+        padding: 16px 18px;
+        border-radius: 12px;
+        color: #14532d;
+    }
+
+    .small-muted {
+        color: #667085;
+        font-size: 0.9rem;
+    }
+
+    div[data-testid="stMetric"] {
+        background: white;
+        border: 1px solid #e8edf3;
+        border-radius: 18px;
+        padding: 14px 16px;
+        box-shadow: 0 4px 14px rgba(15, 23, 42, 0.05);
     }
 </style>
 """, unsafe_allow_html=True)
@@ -72,7 +141,7 @@ history_path = Path("data/risk_history.csv")
 df = pd.read_csv(live_path)
 
 if df.empty:
-    st.error("Dataset empty. Run fetch_live_data.py first.")
+    st.error("Dataset is empty. Run fetch_live_data.py first.")
     st.stop()
 
 if history_path.exists():
@@ -81,7 +150,7 @@ else:
     history_df = pd.DataFrame(columns=["Date", "ISO3", "Country", "Risk_Score"])
 
 # -------------------------------------------------
-# SIDEBAR
+# SIDEBAR CONTROLS
 # -------------------------------------------------
 st.sidebar.header("Scenario Controls")
 
@@ -90,7 +159,7 @@ energy_weight = st.sidebar.slider("Energy Risk Weight", 0.0, 1.0, 0.6, 0.1)
 growth = st.sidebar.slider("Future Risk Growth %", -20, 20, 5)
 
 country_list = sorted(df["Country"].dropna().tolist())
-focus_country = st.sidebar.selectbox("Risk Driver Focus", country_list)
+focus_country = st.sidebar.selectbox("Country Focus", country_list)
 
 if trade_weight + energy_weight == 0:
     trade_weight = 0.4
@@ -118,8 +187,7 @@ df["Risk_Category"] = df["Total_Risk_Score"].apply(classify)
 # -------------------------------------------------
 df["Projected_Risk_Score"] = (
     df["Total_Risk_Score"] * (1 + growth / 100)
-).round(1)
-df["Projected_Risk_Score"] = df["Projected_Risk_Score"].clip(0, 100)
+).round(1).clip(0, 100)
 
 def trend(row):
     if row["Projected_Risk_Score"] > row["Total_Risk_Score"]:
@@ -131,7 +199,7 @@ def trend(row):
 df["Risk_Trend"] = df.apply(trend, axis=1)
 
 # -------------------------------------------------
-# DRIVER ANALYSIS
+# EXPLAINABILITY
 # -------------------------------------------------
 df["Trade_Contribution"] = (trade_weight * df["Trade_Risk"]).round(1)
 df["Energy_Contribution"] = (energy_weight * df["Energy_Risk"]).round(1)
@@ -144,15 +212,6 @@ def driver(row):
     return "Balanced"
 
 df["Main_Risk_Driver"] = df.apply(driver, axis=1)
-
-def top_3_drivers(row):
-    items = [
-        ("Energy Dependency", row["Energy_Contribution"]),
-        ("Trade Exposure", row["Trade_Contribution"]),
-        ("Baseline Structural Risk", max(0.0, 100 - row["Total_Risk_Score"]) / 10)
-    ]
-    items = sorted(items, key=lambda x: x[1], reverse=True)
-    return [items[0][0], items[1][0], items[2][0]]
 
 # -------------------------------------------------
 # AI MODEL
@@ -199,369 +258,340 @@ top_score = float(df.loc[0, "Total_Risk_Score"])
 top_driver = df.loc[0, "Main_Risk_Driver"]
 
 avg_risk = round(df["Total_Risk_Score"].mean(), 1)
-avg_future = round(df["Projected_Risk_Score"].mean(), 1)
+avg_projected = round(df["Projected_Risk_Score"].mean(), 1)
 high_count = int((df["Risk_Category"] == "High").sum())
-total_countries = len(df)
+countries_count = len(df)
 
 avg_trade = round(df["Trade_Risk"].mean(), 1)
 avg_energy = round(df["Energy_Risk"].mean(), 1)
 portfolio_driver = "Energy Dependency" if avg_energy > avg_trade else "Trade Exposure"
 
 focus_row = df[df["Country"] == focus_country].iloc[0]
-focus_drivers = top_3_drivers(focus_row)
 
 last_updated = df["Last_Updated"].iloc[0] if "Last_Updated" in df.columns else "N/A"
 data_source = df["Data_Source"].iloc[0] if "Data_Source" in df.columns else "N/A"
 
 # -------------------------------------------------
-# HEADER
+# HEADER / HERO
 # -------------------------------------------------
-st.title("EU Trade & Energy Risk Intelligence Dashboard")
+st.markdown("""
+<div class="company-banner">
+    <div class="hero-title">EU Risk Intelligence Platform</div>
+    <div class="hero-subtitle">
+        Executive monitoring of trade exposure, energy dependency, and projected country risk across Europe and key global partners.
+    </div>
+</div>
+""", unsafe_allow_html=True)
+
+# -------------------------------------------------
+# KPI ROW
+# -------------------------------------------------
+c1, c2, c3, c4, c5 = st.columns(5)
+with c1:
+    st.metric("Average Risk", f"{avg_risk:.1f}")
+with c2:
+    st.metric("Projected Risk", f"{avg_projected:.1f}")
+with c3:
+    st.metric("High-Risk Markets", f"{high_count}")
+with c4:
+    st.metric("Top Risk Country", top_country)
+with c5:
+    st.metric("Data Coverage", f"{countries_count} Countries")
+
 st.markdown(
-    "<div class='subtitle'>Strategic monitoring of trade exposure, energy dependency, and projected geopolitical risk</div>",
+    f"""
+<div class="alert-box">
+<b>Strategic Alert:</b> {top_country} currently represents the highest portfolio exposure with a total risk score of <b>{top_score:.1f}</b>.
+The primary structural driver is <b>{top_driver}</b>. Immediate monitoring and contingency review are recommended.
+</div>
+""",
     unsafe_allow_html=True
 )
 
-st.markdown(
-    "<div class='info-banner'>"
-    "This platform combines live macro-risk data, AI classification, scenario simulation, forward-looking projection, "
-    "and explainability to support executive monitoring and strategic response planning."
-    "</div>",
-    unsafe_allow_html=True
-)
-
 # -------------------------------------------------
-# REAL-TIME SOURCE INFO
+# DATA STATUS
 # -------------------------------------------------
-st.subheader("Data Status")
+left, right = st.columns([2, 3])
 
-d1, d2, d3 = st.columns(3)
-d1.metric("Data Source", data_source)
-d2.metric("Last Update", last_updated[:16] if isinstance(last_updated, str) else "N/A")
-d3.metric("Countries Monitored", total_countries)
+with left:
+    st.markdown('<div class="section-card">', unsafe_allow_html=True)
+    st.subheader("Data Status")
+    st.write(f"**Source:** {data_source}")
+    st.write(f"**Last Update:** {last_updated}")
+    st.write(f"**Current Scenario:** Trade {trade_weight:.1f} / Energy {energy_weight:.1f}")
+    st.write(f"**Forecast Assumption:** {growth}%")
+    st.markdown('</div>', unsafe_allow_html=True)
 
-st.divider()
-
-# -------------------------------------------------
-# EXECUTIVE SUMMARY
-# -------------------------------------------------
-st.subheader("Executive Summary")
-
-k1, k2, k3, k4 = st.columns(4)
-k1.metric("Average Portfolio Risk", avg_risk)
-k2.metric("High Risk Countries", high_count)
-k3.metric("Projected Portfolio Risk", avg_future)
-k4.metric("Highest Risk Country", top_country)
-
-st.markdown(
-    f"<div class='alert-banner'><b>Strategic Alert:</b> {top_country} currently represents the highest portfolio risk "
-    f"with a score of <b>{top_score:.1f}</b>. Primary driver: <b>{top_driver}</b>.</div>",
-    unsafe_allow_html=True
-)
-
-st.divider()
-
-# -------------------------------------------------
-# RISK OUTLOOK
-# -------------------------------------------------
-st.subheader("Risk Outlook")
-
-o1, o2, o3 = st.columns(3)
-o1.metric("Current Scenario", f"Trade {trade_weight:.1f} / Energy {energy_weight:.1f}")
-o2.metric("Forecast Growth Assumption", f"{growth}%")
-o3.metric("Portfolio Risk Driver", portfolio_driver)
-
-fig_forecast = px.bar(
-    df.head(10),
-    x="Country",
-    y=["Total_Risk_Score", "Projected_Risk_Score"],
-    barmode="group",
-    title="Top Countries – Current vs Projected Risk"
-)
-fig_forecast.update_layout(
-    plot_bgcolor="white",
-    paper_bgcolor="white",
-    margin=dict(l=20, r=20, t=50, b=20),
-    legend_title_text=""
-)
-st.plotly_chart(fig_forecast, width="stretch")
-
-st.divider()
-
-# -------------------------------------------------
-# RISK TREND VISUALIZATION
-# -------------------------------------------------
-st.subheader("Risk Trend Over Time")
-
-if not history_df.empty:
-    country_history = history_df[history_df["Country"] == focus_country].copy()
-    country_history["Date"] = pd.to_datetime(country_history["Date"])
-
-    fig_trend = px.line(
-        country_history,
-        x="Date",
-        y="Risk_Score",
-        markers=True,
-        title=f"12-Month Risk Trend – {focus_country}"
+with right:
+    st.markdown('<div class="section-card">', unsafe_allow_html=True)
+    st.subheader("Executive Assessment")
+    st.markdown(
+        f"""
+<div class="insight-box">
+The current portfolio remains primarily influenced by <b>{portfolio_driver}</b>. 
+Average risk stands at <b>{avg_risk:.1f}</b>, while projected risk under the current scenario rises to <b>{avg_projected:.1f}</b>. 
+Among all monitored countries, <b>{top_country}</b> requires the highest level of management attention.
+</div>
+""",
+        unsafe_allow_html=True
     )
-    fig_trend.update_layout(
+    st.markdown('</div>', unsafe_allow_html=True)
+
+st.divider()
+
+# -------------------------------------------------
+# TABS
+# -------------------------------------------------
+tab1, tab2, tab3, tab4 = st.tabs([
+    "Executive View",
+    "Forecast & Trends",
+    "Risk Drivers",
+    "Reporting"
+])
+
+# -------------------------------------------------
+# TAB 1: EXECUTIVE VIEW
+# -------------------------------------------------
+with tab1:
+    st.subheader("Top Risk Markets")
+
+    top10 = df.head(10).copy()
+
+    fig_rank = px.bar(
+        top10,
+        x="Country",
+        y="Total_Risk_Score",
+        color="Risk_Category",
+        title="Top 10 Countries by Risk Score",
+        color_discrete_map={
+            "High": "#dc2626",
+            "Medium": "#f59e0b",
+            "Low": "#16a34a"
+        }
+    )
+    fig_rank.update_layout(
         plot_bgcolor="white",
         paper_bgcolor="white",
-        margin=dict(l=20, r=20, t=50, b=20)
+        margin=dict(l=20, r=20, t=55, b=20),
+        legend_title_text=""
     )
-    st.plotly_chart(fig_trend, width="stretch")
-else:
-    st.info("Risk history file not found. Run fetch_live_data.py to generate trend data.")
+    st.plotly_chart(fig_rank, width="stretch")
 
-st.divider()
+    col_a, col_b = st.columns([1.2, 1])
 
-# -------------------------------------------------
-# RISK DRIVER ANALYSIS
-# -------------------------------------------------
-st.subheader("Risk Driver Analysis")
+    with col_a:
+        st.subheader("Risk Heatmap")
+        heatmap_df = df[["Country", "Trade_Risk", "Energy_Risk", "Total_Risk_Score"]].set_index("Country")
+        fig_heatmap = px.imshow(
+            heatmap_df,
+            text_auto=".1f",
+            aspect="auto",
+            color_continuous_scale="Reds",
+            title="Country vs Risk Factors"
+        )
+        fig_heatmap.update_layout(
+            margin=dict(l=20, r=20, t=55, b=20)
+        )
+        st.plotly_chart(fig_heatmap, width="stretch")
 
-r1, r2, r3, r4 = st.columns(4)
-r1.metric("Focus Country", focus_country)
-r2.metric("Current Risk", f"{focus_row['Total_Risk_Score']:.1f}")
-r3.metric("Projected Risk", f"{focus_row['Projected_Risk_Score']:.1f}")
-r4.metric("Primary Driver", focus_row["Main_Risk_Driver"])
-
-st.markdown(
-    f"<div class='section-card'>"
-    f"<b>{focus_country}</b> is currently classified as <b>{focus_row['Risk_Category']}</b> risk. "
-    f"The country’s risk profile is primarily driven by <b>{focus_row['Main_Risk_Driver']}</b>.<br><br>"
-    f"<b>Top 3 Drivers:</b><br>"
-    f"1. {focus_drivers[0]}<br>"
-    f"2. {focus_drivers[1]}<br>"
-    f"3. {focus_drivers[2]}<br><br>"
-    f"Trade contribution: <b>{focus_row['Trade_Contribution']:.1f}</b> | "
-    f"Energy contribution: <b>{focus_row['Energy_Contribution']:.1f}</b> | "
-    f"Trend: <b>{focus_row['Risk_Trend']}</b>."
-    f"</div>",
-    unsafe_allow_html=True
-)
-
-driver_df = pd.DataFrame({
-    "Component": ["Trade Contribution", "Energy Contribution"],
-    "Value": [focus_row["Trade_Contribution"], focus_row["Energy_Contribution"]]
-})
-
-fig_driver = px.bar(
-    driver_df,
-    x="Component",
-    y="Value",
-    title=f"Contribution Breakdown – {focus_country}"
-)
-fig_driver.update_layout(
-    plot_bgcolor="white",
-    paper_bgcolor="white",
-    margin=dict(l=20, r=20, t=50, b=20)
-)
-st.plotly_chart(fig_driver, width="stretch")
-
-st.divider()
+    with col_b:
+        st.subheader("Geographic Risk View")
+        fig_map = px.choropleth(
+            df,
+            locations="ISO3",
+            color="Total_Risk_Score",
+            hover_name="Country",
+            color_continuous_scale="Reds",
+            title="Global Trade & Energy Risk Map"
+        )
+        fig_map.update_layout(
+            margin=dict(l=10, r=10, t=55, b=10)
+        )
+        st.plotly_chart(fig_map, width="stretch")
 
 # -------------------------------------------------
-# TOP RISK COUNTRIES
+# TAB 2: FORECAST & TRENDS
 # -------------------------------------------------
-st.subheader("Top Risk Countries")
+with tab2:
+    st.subheader("Risk Projection")
 
-top_table = df[[
-    "Country",
-    "Total_Risk_Score",
-    "Projected_Risk_Score",
-    "Risk_Category",
-    "Risk_Trend",
-    "Main_Risk_Driver"
-]].head(10)
+    fig_proj = px.bar(
+        df.head(10),
+        x="Country",
+        y=["Total_Risk_Score", "Projected_Risk_Score"],
+        barmode="group",
+        title="Current vs Projected Risk – Top 10 Countries"
+    )
+    fig_proj.update_layout(
+        plot_bgcolor="white",
+        paper_bgcolor="white",
+        margin=dict(l=20, r=20, t=55, b=20),
+        legend_title_text=""
+    )
+    st.plotly_chart(fig_proj, width="stretch")
 
-st.dataframe(
-    top_table.style.format({
-        "Total_Risk_Score": "{:.1f}",
-        "Projected_Risk_Score": "{:.1f}"
-    }),
-    width="stretch"
-)
+    st.subheader("Country Trend View")
 
-st.divider()
+    if not history_df.empty:
+        focus_history = history_df[history_df["Country"] == focus_country].copy()
+        focus_history["Date"] = pd.to_datetime(focus_history["Date"])
+
+        fig_trend = px.line(
+            focus_history,
+            x="Date",
+            y="Risk_Score",
+            markers=True,
+            title=f"12-Month Risk Trend – {focus_country}"
+        )
+        fig_trend.update_layout(
+            plot_bgcolor="white",
+            paper_bgcolor="white",
+            margin=dict(l=20, r=20, t=55, b=20)
+        )
+        st.plotly_chart(fig_trend, width="stretch")
+    else:
+        st.info("Risk history file not found. Run fetch_live_data.py to generate trend data.")
 
 # -------------------------------------------------
-# AI MONITORING
+# TAB 3: RISK DRIVERS
 # -------------------------------------------------
-st.subheader("AI Monitoring")
+with tab3:
+    st.subheader("Country Driver Summary")
 
-a1, a2 = st.columns(2)
+    k1, k2, k3, k4 = st.columns(4)
+    k1.metric("Focus Country", focus_country)
+    k2.metric("Current Risk", f"{focus_row['Total_Risk_Score']:.1f}")
+    k3.metric("Projected Risk", f"{focus_row['Projected_Risk_Score']:.1f}")
+    k4.metric("Primary Driver", focus_row["Main_Risk_Driver"])
 
-with a1:
-    st.metric("Model Accuracy", f"{accuracy:.2f}" if accuracy is not None else "N/A")
+    st.markdown(
+        f"""
+<div class="section-card">
+<b>{focus_country}</b> is currently classified as <b>{focus_row['Risk_Category']}</b> risk.
+The strongest structural driver is <b>{focus_row['Main_Risk_Driver']}</b>.
+
+<br><br>
+<b>Contribution Breakdown</b><br>
+Trade Contribution: <b>{focus_row['Trade_Contribution']:.1f}</b><br>
+Energy Contribution: <b>{focus_row['Energy_Contribution']:.1f}</b><br>
+Projected Trend: <b>{focus_row['Risk_Trend']}</b>
+</div>
+""",
+        unsafe_allow_html=True
+    )
+
+    left, right = st.columns(2)
+
+    with left:
+        contrib_df = pd.DataFrame({
+            "Component": ["Trade Contribution", "Energy Contribution"],
+            "Value": [focus_row["Trade_Contribution"], focus_row["Energy_Contribution"]]
+        })
+
+        fig_driver = px.bar(
+            contrib_df,
+            x="Component",
+            y="Value",
+            title=f"Risk Contribution Breakdown – {focus_country}",
+            color="Component"
+        )
+        fig_driver.update_layout(
+            plot_bgcolor="white",
+            paper_bgcolor="white",
+            margin=dict(l=20, r=20, t=55, b=20),
+            showlegend=False
+        )
+        st.plotly_chart(fig_driver, width="stretch")
+
+    with right:
+        st.subheader("AI Monitoring")
+        st.metric("Model Accuracy", f"{accuracy:.2f}" if accuracy is not None else "N/A")
+
+        fig_imp = px.bar(
+            importance,
+            x="Feature",
+            y="Importance",
+            title="Model Feature Importance"
+        )
+        fig_imp.update_layout(
+            plot_bgcolor="white",
+            paper_bgcolor="white",
+            margin=dict(l=20, r=20, t=55, b=20)
+        )
+        st.plotly_chart(fig_imp, width="stretch")
+
+# -------------------------------------------------
+# TAB 4: REPORTING
+# -------------------------------------------------
+with tab4:
+    st.subheader("Management Recommendations")
+
+    st.markdown(
+        f"""
+<div class="action-box">
+<b>Primary Action:</b> {"Prioritise energy diversification and reduce structural import dependency." if portfolio_driver == "Energy Dependency" else "Strengthen trade resilience and reduce concentration exposure."}
+<br><br>
+<b>Immediate Response:</b> {"Intensify monitoring and contingency planning for " + top_country + "." if high_count > 0 else "Maintain routine monitoring under the current scenario."}
+<br><br>
+<b>Medium-Term Priorities:</b><br>
+• Improve cross-border resilience planning<br>
+• Expand alternative sourcing strategies<br>
+• Increase scenario-based stress testing<br>
+• Review exposure to geopolitical disruption
+</div>
+""",
+        unsafe_allow_html=True
+    )
+
+    st.subheader("Download Reports")
+
+    full_csv = df.to_csv(index=False).encode("utf-8")
+    top10_csv = df.head(10).to_csv(index=False).encode("utf-8")
+
+    d1, d2 = st.columns(2)
+    with d1:
+        st.download_button(
+            label="Download Full Risk Dataset (CSV)",
+            data=full_csv,
+            file_name="eu_trade_energy_risk_report.csv",
+            mime="text/csv"
+        )
+    with d2:
+        st.download_button(
+            label="Download Top 10 Risk Report (CSV)",
+            data=top10_csv,
+            file_name="top_10_risk_report.csv",
+            mime="text/csv"
+        )
+
+    st.subheader("Detailed Dataset")
+
+    detail_cols = [
+        "ISO3",
+        "Country",
+        "Trade_Risk",
+        "Energy_Risk",
+        "Dependency_Level",
+        "Total_Risk_Score",
+        "Risk_Category",
+        "Predicted_Risk_Category",
+        "Projected_Risk_Score",
+        "Risk_Trend",
+        "Trade_Contribution",
+        "Energy_Contribution",
+        "Main_Risk_Driver",
+        "Last_Updated",
+        "Data_Source"
+    ]
+
     st.dataframe(
-        df[["Country", "Risk_Category", "Predicted_Risk_Category"]].head(10),
+        df[detail_cols].style.format({
+            "Trade_Risk": "{:.1f}",
+            "Energy_Risk": "{:.1f}",
+            "Total_Risk_Score": "{:.1f}",
+            "Projected_Risk_Score": "{:.1f}",
+            "Trade_Contribution": "{:.1f}",
+            "Energy_Contribution": "{:.1f}"
+        }),
         width="stretch"
     )
-
-with a2:
-    fig_imp = px.bar(
-        importance,
-        x="Feature",
-        y="Importance",
-        title="AI Model Feature Importance"
-    )
-    fig_imp.update_layout(
-        plot_bgcolor="white",
-        paper_bgcolor="white",
-        margin=dict(l=20, r=20, t=50, b=20)
-    )
-    st.plotly_chart(fig_imp, width="stretch")
-
-st.divider()
-
-# -------------------------------------------------
-# HEATMAP
-# -------------------------------------------------
-st.subheader("Risk Heatmap")
-
-heatmap_df = df[["Country", "Trade_Risk", "Energy_Risk", "Total_Risk_Score"]].set_index("Country")
-fig_heatmap = px.imshow(
-    heatmap_df,
-    text_auto=".1f",
-    aspect="auto",
-    color_continuous_scale="Reds",
-    title="Country vs Risk Factors Heatmap"
-)
-fig_heatmap.update_layout(
-    margin=dict(l=20, r=20, t=50, b=20)
-)
-st.plotly_chart(fig_heatmap, width="stretch")
-
-st.divider()
-
-# -------------------------------------------------
-# PORTFOLIO COMPARISON
-# -------------------------------------------------
-st.subheader("Portfolio Risk Comparison")
-
-fig_compare = px.bar(
-    df,
-    x="Country",
-    y=["Trade_Risk", "Energy_Risk"],
-    barmode="group",
-    title="Trade Risk vs Energy Risk by Country"
-)
-fig_compare.update_layout(
-    plot_bgcolor="white",
-    paper_bgcolor="white",
-    legend_title_text="",
-    margin=dict(l=20, r=20, t=50, b=20)
-)
-st.plotly_chart(fig_compare, width="stretch")
-
-st.divider()
-
-# -------------------------------------------------
-# MANAGEMENT RECOMMENDATIONS
-# -------------------------------------------------
-st.subheader("Management Recommendations")
-
-st.markdown("<div class='section-card'>", unsafe_allow_html=True)
-
-if portfolio_driver == "Energy Dependency":
-    st.write("**Primary Action:** Prioritize energy diversification and reduce structural import dependency.")
-else:
-    st.write("**Primary Action:** Strengthen trade resilience and reduce concentration exposure.")
-
-if high_count > 0:
-    st.write(f"**Immediate Response:** Intensify monitoring and contingency planning for **{top_country}**.")
-else:
-    st.write("**Immediate Response:** Maintain routine monitoring under the current scenario.")
-
-st.write("**Medium-Term Priorities:**")
-st.write("- Improve cross-border resilience planning")
-st.write("- Expand alternative sourcing strategies")
-st.write("- Increase scenario-based stress testing")
-st.write("- Review exposure to geopolitical disruption")
-
-st.markdown("</div>", unsafe_allow_html=True)
-
-st.divider()
-
-# -------------------------------------------------
-# GEOGRAPHIC VIEW
-# -------------------------------------------------
-st.subheader("Geographic Risk View")
-
-fig_map = px.choropleth(
-    df,
-    locations="ISO3",
-    color="Total_Risk_Score",
-    hover_name="Country",
-    color_continuous_scale="Reds",
-    title="Global Trade & Energy Risk Map"
-)
-fig_map.update_layout(
-    margin=dict(l=20, r=20, t=50, b=20)
-)
-st.plotly_chart(fig_map, width="stretch")
-
-st.divider()
-
-# -------------------------------------------------
-# DOWNLOADABLE REPORTS
-# -------------------------------------------------
-st.subheader("Download Reports")
-
-csv_data = df.to_csv(index=False).encode("utf-8")
-top10_csv = top_table.to_csv(index=False).encode("utf-8")
-
-b1, b2 = st.columns(2)
-with b1:
-    st.download_button(
-        label="Download Full Risk Dataset (CSV)",
-        data=csv_data,
-        file_name="eu_trade_energy_risk_report.csv",
-        mime="text/csv"
-    )
-
-with b2:
-    st.download_button(
-        label="Download Top Risk Countries Report (CSV)",
-        data=top10_csv,
-        file_name="top_risk_countries_report.csv",
-        mime="text/csv"
-    )
-
-st.divider()
-
-# -------------------------------------------------
-# DETAILED DATA
-# -------------------------------------------------
-st.subheader("Detailed Dataset")
-
-detail_cols = [
-    "ISO3",
-    "Country",
-    "Trade_Risk",
-    "Energy_Risk",
-    "Dependency_Level",
-    "Total_Risk_Score",
-    "Risk_Category",
-    "Predicted_Risk_Category",
-    "Projected_Risk_Score",
-    "Risk_Trend",
-    "Trade_Contribution",
-    "Energy_Contribution",
-    "Main_Risk_Driver",
-    "Last_Updated",
-    "Data_Source"
-]
-
-st.dataframe(
-    df[detail_cols].style.format({
-        "Trade_Risk": "{:.1f}",
-        "Energy_Risk": "{:.1f}",
-        "Total_Risk_Score": "{:.1f}",
-        "Projected_Risk_Score": "{:.1f}",
-        "Trade_Contribution": "{:.1f}",
-        "Energy_Contribution": "{:.1f}"
-    }),
-    width="stretch"
-)
