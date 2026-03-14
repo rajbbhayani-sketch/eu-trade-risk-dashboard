@@ -34,11 +34,10 @@ st.markdown("""
         font-weight: 700;
     }
 
-    .hero-title {
-        font-size: 2.4rem;
-        font-weight: 800;
-        color: #132238;
-        margin-bottom: 0.25rem;
+   .hero-title {
+    font-size: 2.2rem;
+    font-weight: 800;
+    color: #111827;
     }
 
     .hero-subtitle {
@@ -48,11 +47,12 @@ st.markdown("""
     }
 
     .company-banner {
-        background: linear-gradient(90deg, #132238 0%, #1f3b63 100%);
-        color: white;
-        padding: 22px 24px;
-        border-radius: 18px;
-        margin-bottom: 20px;
+    background: #ffffff;
+    border: 1px solid #e8edf3;
+    padding: 22px 24px;
+    border-radius: 18px;
+    margin-bottom: 20px;
+    box-shadow: 0 4px 14px rgba(15, 23, 42, 0.05);
     }
 
     .section-card {
