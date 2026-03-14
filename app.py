@@ -40,13 +40,13 @@ st.markdown("""
     color: #111827;
     }
 
-    .hero-subtitle {
-        font-size: 1.05rem;
-        color: #5b6472;
-        margin-bottom: 1rem;
+   .hero-subtitle {
+    font-size: 1rem;
+    color: #6b7280;
+    margin-bottom: 1rem;
     }
 
-    .company-banner {
+   .company-banner {
     background: #ffffff;
     border: 1px solid #e8edf3;
     padding: 22px 24px;
