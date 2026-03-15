@@ -1,177 +1,175 @@
-AI Decision Support for EU Trade & Energy Risk
+EU Trade Risk Intelligence Platform
 
-An interactive business intelligence dashboard built with Python and Streamlit to monitor trade disruption and energy dependency risk across European countries and key global partners.
+An interactive risk intelligence dashboard designed to monitor trade exposure, energy dependency, and projected country risk across Europe and key global partners.
 
-The platform combines data analytics, machine learning, scenario simulation, and geographic visualization to support strategic monitoring of geopolitical and economic risk.
+The platform provides executives and analysts with a real-time view of macro-economic risk drivers, enabling scenario analysis and strategic monitoring of high-risk markets.
 
-Live Dashboard
+Overview
 
-Access the live application:
-https://eu-trade-risk-dashboard-opdttpup9zzh7opacsqmki.streamlit.app/
+The EU Trade Risk Intelligence Platform combines trade exposure indicators with energy dependency data to estimate a country-level risk score.
 
-Project Overview
+Users can adjust risk weights and simulate future risk scenarios to understand how changes in global trade or energy markets could impact country exposure.
 
-Global supply chains and energy dependencies expose countries to geopolitical and economic disruption.
-This dashboard provides a decision-support tool to monitor risk exposure across countries and evaluate how trade and energy dependency influence national risk profiles.
+The dashboard includes:
 
-The application enables users to:
+Executive risk monitoring
 
-Monitor country-level trade and energy risk indicators
+Scenario-based risk simulations
 
-Simulate different risk scenarios using adjustable weights
+Country risk rankings
 
-Project future risk levels
+Risk heatmaps
 
-Identify dominant risk drivers
-
-Compare countries across multiple risk dimensions
-
-Visualize global risk exposure on an interactive map
-
-Use machine learning to classify risk categories
-
-The goal is to provide strategic insight for policy analysts, business planners, and risk managers.
+Geographic risk visualization
 
 Key Features
 Executive Risk Dashboard
 
-Portfolio risk summary
+Provides high-level KPIs including:
 
-Strategic alert for highest-risk country
+Average portfolio risk
 
-Top risk country ranking
+Projected future risk
 
-Scenario simulation controls
+Number of high-risk markets
 
-Country Risk Analysis
+Highest risk country
 
-Country-level risk breakdown
+Data coverage
 
-Trade vs energy risk contribution
+Designed to give decision makers a quick strategic overview of risk exposure.
 
-Country benchmarking and comparison
+Scenario Risk Controls
 
-Peer country analysis
+Interactive sliders allow users to adjust:
 
-Risk Projection
+Trade risk weight
 
-Future risk simulation using adjustable growth scenarios
+Energy dependency weight
 
-Identification of rising or declining risk trends
+Future risk growth assumptions
 
-AI Risk Classification
+Country-specific analysis
 
-Machine learning model using Random Forest to classify country risk levels.
+This enables what-if simulations to test how different economic conditions affect risk levels.
 
-Model features include:
+Risk Market Ranking
 
-Trade risk
+A visual comparison of top risk countries based on total risk score.
 
-Energy risk
+Helps identify markets requiring:
 
-Energy dependency level
+strategic monitoring
 
-Geographic Risk Visualization
+contingency planning
 
-Interactive world map showing risk exposure by country.
+risk mitigation.
 
-Strategic Decision Support
+Risk Heatmap
 
-The dashboard highlights:
+A heatmap visualization highlighting how trade risk and energy risk contribute to total country risk.
 
-dominant risk drivers
+This helps analysts identify structural risk drivers across countries.
 
-portfolio risk exposure
+Geographic Risk View
 
-strategic recommendations
+A global map showing the geographic distribution of trade and energy risk exposure.
 
-Technologies Used
+Useful for understanding regional concentration of economic vulnerabilities.
+
+Risk Model
+
+The platform estimates total country risk using a weighted scoring approach.
+
+Total Risk Score =
+(Trade Risk × Trade Weight)
++ (Energy Risk × Energy Weight)
+
+Users can dynamically adjust the weights to simulate different strategic priorities.
+
+Example:
+
+Trade Weight = 0.40
+Energy Weight = 0.60
+
+Future risk projections are calculated using a configurable growth assumption.
+
+Data Sources
+
+The platform uses publicly available macroeconomic indicators including:
+
+World Bank trade data
+
+Energy dependency indicators
+
+Country-level economic metrics
+
+Data is processed and aggregated into a structured dataset used by the dashboard.
+
+Technology Stack
 
 Python
+
 Streamlit
+
 Pandas
+
+NumPy
+
 Plotly
+
 Scikit-learn
-
-Additional tools:
-
-GitHub for version control
-
-Streamlit Cloud for deployment
 
 Project Structure
 eu-trade-risk-dashboard
 │
-├── app.py
-│   Main executive dashboard
+├── app.py                       # Main Streamlit dashboard
+├── pages/
+│   └── Country_Risk_Analysis.py # Country-level risk insights
 │
-├── pages
-│   └── 1_Country_Risk_Analysis.py
-│       Country-level risk benchmarking
+├── fetch_live_data.py           # Data generation script
 │
-├── data
-│   ├── eu_trade_energy_risk.csv
-│   └── live_country_risk_data.csv
-│
-├── fetch_live_data.py
-│   Script to generate/update the live dataset
+├── data/
+│   ├── live_country_risk_data.csv
+│   └── risk_history.csv
 │
 ├── requirements.txt
-│   Python dependencies
-│
 └── README.md
-How to Run Locally
+Installation
 
-Clone the repository:
+Clone the repository
 
-git clone https://github.com/your-username/eu-trade-risk-dashboard.git
+git clone https://github.com/rajbbhayani-sketch/eu-trade-risk-dashboard.git
 cd eu-trade-risk-dashboard
 
-Install dependencies:
+Install dependencies
 
 pip install -r requirements.txt
 
-Run the dashboard:
+Run the Streamlit application
 
 streamlit run app.py
-Example Use Cases
+Live Dashboard
 
-This dashboard can support:
+Access the deployed application:
 
-Risk analysts evaluating geopolitical exposure
-
-Business strategy teams monitoring trade disruption risk
-
-Energy policy researchers studying dependency patterns
-
-Supply chain planners assessing country-level vulnerability
+https://eu-trade-risk-dashboard-opdttpup9zzh7opacsqmki.streamlit.app/
 
 Future Improvements
 
 Potential enhancements include:
 
-Integration with real-time economic data APIs
+Integration with additional economic indicators
 
-Advanced forecasting models
+Time-series forecasting of risk trends
 
-Automated risk alerts
+Expanded geopolitical risk factors
 
-Exportable analytics reports
+Automated data pipeline for real-time updates
 
-Additional macroeconomic indicators
-
-Author
-
-Developed as a data analytics and decision-support project demonstrating:
-
-data analysis
-
-machine learning
-
-dashboard development
-
-business intelligence visualization
+Advanced machine learning risk prediction models
 
 License
 
-This project is for educational and portfolio purposes.
+This project is shared for educational and demonstration purposes.
+All rights reserved by the author.
