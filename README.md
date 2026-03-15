@@ -121,20 +121,35 @@ Plotly
 Scikit-learn
 
 Project Structure
+
 eu-trade-risk-dashboard
+
 │
+
 ├── app.py                       # Main Streamlit dashboard
+
 ├── pages/
+
 │   └── Country_Risk_Analysis.py # Country-level risk insights
+
 │
+
 ├── fetch_live_data.py           # Data generation script
+
 │
+
 ├── data/
+
 │   ├── live_country_risk_data.csv
+
 │   └── risk_history.csv
+
 │
+
 ├── requirements.txt
+
 └── README.md
+
 Installation
 
 Clone the repository
